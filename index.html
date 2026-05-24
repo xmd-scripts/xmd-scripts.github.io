@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>xmd — executable markdown</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0a0a0a;
+      --surface:  #111;
+      --border:   #222;
+      --text:     #d4d4d4;
+      --muted:    #888;
+      --green:    #4ade80;
+      --yellow:   #facc15;
+      --blue:     #60a5fa;
+      --purple:   #c084fc;
+      --red:      #f87171;
+      --font:     ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    a { color: var(--green); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    section {
+      padding: 80px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    section:last-child { border-bottom: none; }
+
+    /* ── Two-column feature layout ── */
+    .feature-row {
+      display: grid;
+      grid-template-columns: 1fr 1.5fr;
+      gap: 40px;
+      align-items: start;
+    }
+
+    .feature-text { min-width: 0; }
+    .feature-code { min-width: 0; }
+
+    /* ── Hero ── */
+    #hero {
+      padding: 120px 0 100px;
+      text-align: center;
+    }
+
+    #hero h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    #hero h1 span { color: var(--green); }
+
+    #hero > .container > p {
+      font-size: 1.05rem;
+      color: var(--muted);
+      margin-bottom: 48px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .install-box {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 20px;
+      font-size: 0.9rem;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    .install-box code {
+      color: var(--green);
+      min-width: 0;
+      flex: 1;
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .copy-btn:hover { color: var(--text); border-color: var(--text); }
+
+    .gh-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-family: var(--font);
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 12px 28px;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+
+    .gh-btn:hover { opacity: 0.75; text-decoration: none; }
+
+    /* ── Feature text ── */
+    .feature-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+
+    .lead {
+      color: var(--muted);
+      margin-bottom: 0;
+      max-width: 520px;
+    }
+
+    /* ── Code blocks ── */
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 0;
+    }
+
+    .code-block + .code-block {
+      margin-top: -1px;
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+    }
+
+    .code-header {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.7rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .code-header .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+
+    pre {
+      padding: 20px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    /* Syntax colours */
+    .c   { color: var(--muted); }
+    .k   { color: var(--purple); }
+    .s   { color: var(--green); }
+    .v   { color: var(--yellow); }
+    .p   { color: var(--blue); }
+    .cmd { color: var(--blue); }
+    .fn  { color: var(--green); }
+
+    .run {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-top: 12px;
+    }
+
+    .run::before { content: '$'; color: var(--green); }
+    .run code { color: var(--text); }
+
+    /* ── Callout ── */
+    .callout {
+      border-left: 2px solid var(--green);
+      padding: 12px 16px;
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .callout strong { color: var(--text); }
+
+    /* ── Backends ── */
+    .backends {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .backend-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      min-width: 0;
+    }
+
+    .backend-card .name { color: #fff; margin-bottom: 4px; }
+    .backend-card .url  { color: var(--muted); font-size: 0.78rem; word-break: break-all; }
+
+    /* ── Comparison table ── */
+    .compare-table {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .compare-table th {
+      text-align: left;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .compare-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .compare-table tr:last-child td { border-bottom: none; }
+    .compare-table td:first-child { color: var(--muted); width: 40%; }
+    .compare-table td:last-child { color: var(--text); }
+
+    /* ── Examples CTA ── */
+    #examples { text-align: center; }
+    #examples h2 { margin-bottom: 8px; }
+    #examples .sub { color: var(--muted); margin-bottom: 48px; }
+
+    .examples-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 40px;
+      text-align: left;
+    }
+
+    .example-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px;
+    }
+
+    .example-card .title { color: #fff; margin-bottom: 6px; font-size: 0.9rem; }
+    .example-card .desc  { color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
+
+    .cta-btn {
+      display: inline-block;
+      background: var(--green);
+      color: #000;
+      font-family: var(--font);
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 12px 28px;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+
+    .cta-btn:hover { opacity: 0.85; text-decoration: none; }
+
+    /* ── Footer ── */
+    footer {
+      padding: 40px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.78rem;
+      border-top: 1px solid var(--border);
+    }
+
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+
+    /* ── Demo block ── */
+    .demo-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      max-width: 480px;
+      margin: 0 auto 40px;
+      text-align: left;
+    }
+
+    .demo-file-header {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.7rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .demo-file-header .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+
+    .demo-body {
+      padding: 16px 20px;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      height: 96px;
+      overflow: hidden;
+    }
+
+    .demo-line { white-space: pre; }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+
+    .demo-cursor {
+      animation: blink 0.8s step-end infinite;
+      color: var(--green);
+    }
+
+    .demo-run {
+      padding: 10px 20px;
+      border-top: 1px solid var(--border);
+      font-size: 0.82rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .demo-run .p { color: var(--green); }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      #hero h1 { font-size: 1.8rem; }
+      .feature-row { grid-template-columns: 1fr; }
+      .feature-code { margin-top: 24px; }
+      .backends, .examples-grid { grid-template-columns: 1fr; }
+      .install-box { flex-direction: column; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Hero ─────────────────────────────────────────────────────── -->
+<section id="hero">
+  <div class="container">
+    <h1><span>xmd</span> — executable markdown</h1>
+    <p>LLMs as unix scripts. Write the prompt in markdown, run it like a command.</p>
+
+    <div class="demo-block">
+      <div class="demo-file-header"><span class="dot"></span><span id="demo-filename">find-blue.md</span></div>
+      <div class="demo-body">
+        <div class="demo-line"><span class="p">#!/usr/bin/env xmd</span></div>
+        <div class="demo-line"><span id="demo-prompt"></span><span class="demo-cursor" id="demo-cursor">█</span></div>
+      </div>
+      <div class="demo-run" id="demo-run">
+        <span class="p">$</span> <span id="demo-cmd"></span><span class="demo-cursor" id="demo-run-cursor" style="display:none">█</span>
+      </div>
+    </div>
+
+    <div class="install-box">
+      <span style="color:var(--muted);font-size:0.75rem;white-space:nowrap">install</span>
+      <code>curl -sSL https://raw.githubusercontent.com/xmd-scripts/xmd/main/install.sh | sh</code>
+      <button class="copy-btn" onclick="navigator.clipboard.writeText('curl -sSL https://raw.githubusercontent.com/xmd-scripts/xmd/main/install.sh | sh');this.textContent='copied';setTimeout(()=>this.textContent='copy',1500)">copy</button>
+    </div>
+    <a class="gh-btn" href="https://github.com/xmd-scripts/xmd" target="_blank">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      View on GitHub →
+    </a>
+  </div>
+</section>
+
+<!-- ── What it is ────────────────────────────────────────────────── -->
+<section id="what">
+  <div class="container">
+    <div class="feature-row">
+      <div class="feature-text">
+        <p class="feature-label">what it is</p>
+        <h2>The LLM is the interpreter.</h2>
+        <p class="lead">Write what you want in plain markdown. xmd sends it to any OpenAI-compatible model, gives it file and shell tools sandboxed to your working directory, streams output to stdout and reasoning to stderr.</p>
+      </div>
+      <div class="feature-code">
+        <div class="code-block">
+          <div class="code-header"><span class="dot"></span>find-blue.md</div>
+          <pre><span class="p">#!/usr/bin/env xmd</span>
+Find all images with a blue
+background in this directory.</pre>
+        </div>
+        <p class="run"><code>./find-blue.md</code></p>
+        <div class="callout">
+          The read file tool supports multimodal models. Images are passed as file inputs.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Variables ─────────────────────────────────────────────────── -->
+<section id="vars">
+  <div class="container">
+    <div class="feature-row">
+      <div class="feature-text">
+        <p class="feature-label">variables</p>
+        <h2>Declare inputs in frontmatter.</h2>
+        <p class="lead">Variables are declared in a YAML block and listed in a preamble the model reads before your script. Pass them as <code>key=value</code> arguments.</p>
+      </div>
+      <div class="feature-code">
+        <div class="code-block">
+          <div class="code-header"><span class="dot"></span>hello.md</div>
+          <pre><span class="p">#!/usr/bin/env xmd</span>
+<span class="p">---</span>
+<span class="k">vars</span>:
+  <span class="k">name</span>: <span class="s">required</span>
+<span class="p">---</span>
+Say hello to <span class="v">$NAME</span> in a creative way.</pre>
+        </div>
+        <p class="run"><code>./hello.md name=world</code></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Includes ──────────────────────────────────────────────────── -->
+<section id="includes">
+  <div class="container">
+    <div class="feature-row">
+      <div class="feature-text">
+        <p class="feature-label">includes</p>
+        <h2>Share prompts across scripts.</h2>
+        <p class="lead">Include other markdown files as shared instructions. Reuse tone, format rules, or domain knowledge across any number of scripts. You decide exactly what context each script gets, instead of throwing hundreds of skills at every agent call.</p>
+      </div>
+      <div class="feature-code">
+        <div class="code-block">
+          <div class="code-header"><span class="dot"></span>blog-post.md</div>
+          <pre><span class="p">#!/usr/bin/env xmd</span>
+<span class="p">---</span>
+<span class="k">vars</span>:
+  <span class="k">topic</span>: <span class="s">required</span>
+<span class="k">include</span>:
+  - <span class="s">tone.md</span>
+  - <span class="s">output-format.md</span>
+<span class="p">---</span>
+Write a blog post about <span class="v">$TOPIC</span>.</pre>
+        </div>
+        <p class="run"><code>./blog-post.md topic="the future of coding"</code></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Subagents ─────────────────────────────────────────────────── -->
+<section id="subagents">
+  <div class="container">
+    <div class="feature-row">
+      <div class="feature-text">
+        <p class="feature-label">subagents</p>
+        <h2>Scripts can call other scripts.</h2>
+        <p class="lead">An xmd script can run another xmd script as a subprocess via shell tools. Each call gets a fresh model context: no shared state, no leakage. Subagent semantics from Unix process isolation.</p>
+      </div>
+      <div class="feature-code">
+        <div class="code-block">
+          <div class="code-header"><span class="dot"></span>write-and-review.md</div>
+          <pre><span class="p">#!/usr/bin/env xmd</span>
+<span class="p">---</span>
+<span class="k">vars</span>:
+  <span class="k">topic</span>: <span class="s">required</span>
+<span class="p">---</span>
+Write a short essay about <span class="v">$TOPIC</span>.
+Then run <span class="fn">./critic.md</span> and pass the essay through stdin.
+Rewrite based on the feedback and output the final version.</pre>
+        </div>
+        <div class="callout">
+          <strong>critic.md runs in a clean context.</strong> It has no memory of writing the draft, so its critique is genuinely independent. Each subprocess is its own process, its own tool sandbox.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Pipes ─────────────────────────────────────────────────────── -->
+<section id="pipes">
+  <div class="container">
+    <div class="feature-row">
+      <div class="feature-text">
+        <p class="feature-label">unix pipes</p>
+        <h2>Compose scripts with pipes.</h2>
+        <p class="lead">Declare a variable as <code>stdin: true</code> and it maps directly to a pipe. Chain scripts the same way you chain shell commands.</p>
+      </div>
+      <div class="feature-code">
+        <div class="code-block">
+          <div class="code-header"><span class="dot"></span>shell</div>
+          <pre><span class="cmd">cat</span> pitch.md | <span class="fn">./architect.md</span> | <span class="fn">./spec-writer.md</span> > spec.md</pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="dot"></span>review.md (stdin mapped to a variable)</div>
+          <pre><span class="p">---</span>
+<span class="k">vars</span>:
+  <span class="k">topic</span>: <span class="s">required</span>
+  <span class="k">draft</span>:
+    <span class="k">stdin</span>: <span class="s">true</span>
+<span class="p">---</span>
+Review how well this <span class="v">$DRAFT</span> covers <span class="v">$TOPIC</span>.
+Rate it 1–10. Output:
+<span class="k">## Rating</span>
+&lt;n&gt;/10
+<span class="k">## Gaps</span>
+&lt;one line&gt;
+<span class="k">## Suggestion</span>
+&lt;one actionable fix&gt;</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Debug ─────────────────────────────────────────────────────── -->
+<section id="debug">
+  <div class="container">
+    <div class="feature-row">
+      <div class="feature-text">
+        <p class="feature-label">debuggable ai workflows</p>
+        <h2>See exactly what the model sees.</h2>
+        <p class="lead">Pass <code>--debug</code> to dump the full rendered prompt to stderr: every include, every variable, exactly as sent to the model.</p>
+      </div>
+      <div class="feature-code">
+        <div class="code-block">
+          <div class="code-header"><span class="dot"></span>shell</div>
+          <pre><span class="cmd">cat</span> essay.md | <span class="fn">./review.md</span> <span class="k">--debug</span> topic=<span class="s">"the future of coding"</span> 2>prompt.txt</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Backends ──────────────────────────────────────────────────── -->
+<section id="backends">
+  <div class="container">
+    <p class="feature-label">backends</p>
+    <h2>Bring your own model.</h2>
+    <p class="lead" style="margin-bottom:0">Point <code>XMD_COMPLETION_URL</code> at any backend. Defaults to <code>localhost:11434</code> (ollama).</p>
+
+    <div class="backends">
+      <div class="backend-card">
+        <div class="name">ollama / llama-server (default)</div>
+        <div class="url">http://localhost:11434/v1/chat/completions</div>
+      </div>
+      <div class="backend-card">
+        <div class="name">OpenAI</div>
+        <div class="url">https://api.openai.com/v1/chat/completions</div>
+      </div>
+      <div class="backend-card">
+        <div class="name">Anthropic, LM Studio, vLLM, …</div>
+        <div class="url">any OpenAI-compatible endpoint</div>
+      </div>
+      <div class="backend-card">
+        <div class="name">Cursor, Pi, …</div>
+        <div class="url">Use agents as backends. They bring their own native tools on top of xmd's sandboxed file and shell access.</div>
+      </div>
+    </div>
+
+    <div class="code-block" style="margin-top:24px">
+      <div class="code-header"><span class="dot"></span>shell</div>
+      <pre><span class="k">XMD_COMPLETION_URL</span>=https://api.openai.com/v1/chat/completions <span class="fn">./script.md</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ── No reinventing the wheel ──────────────────────────────────── -->
+<section id="unix">
+  <div class="container">
+    <p class="feature-label">no reinventing the wheel</p>
+    <h2>AI agents, the Unix way.</h2>
+    <p class="lead" style="margin-bottom:24px">xmd maps familiar agent concepts to primitives you already know. stdout and exit codes mean it composes naturally with shell scripts for deterministic orchestration.</p>
+
+    <div class="code-block">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>feature</th>
+            <th>xmd — the unix way</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>subagents</td>
+            <td>process isolation via shell calls</td>
+          </tr>
+          <tr>
+            <td>MCP servers</td>
+            <td>CLI programs run by scripts</td>
+          </tr>
+          <tr>
+            <td>skills &amp; rules</td>
+            <td>markdown files, composable with includes</td>
+          </tr>
+          <tr>
+            <td>orchestration</td>
+            <td>stdin / stdout, pipes, exit codes</td>
+          </tr>
+          <tr>
+            <td>discovery</td>
+            <td><code>--help</code> shows script usage</td>
+          </tr>
+          <tr>
+            <td>remote agents</td>
+            <td>ssh for remote scripts</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── Tell your agent ───────────────────────────────────────────── -->
+<section id="agent">
+  <div class="container">
+    <p class="feature-label">tell your agent</p>
+    <h2>Let your agent write xmd scripts for you.</h2>
+    <p class="lead">Read the quickstart yourself, or drop the agent skill directly into your coding agent.</p>
+    <div style="text-align:center;margin-top:28px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+      <a class="cta-btn" href="https://github.com/xmd-scripts/xmd/blob/main/docs/quickstart.md" target="_blank">Quickstart →</a>
+      <a class="cta-btn" href="https://github.com/xmd-scripts/xmd/tree/main/skill/xmd" target="_blank">Agent skill →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Examples CTA ──────────────────────────────────────────────── -->
+<section id="examples">
+  <div class="container">
+    <h2>See what can be built.</h2>
+    <p class="sub">Ready-to-run examples in the repo.</p>
+
+    <div class="examples-grid">
+      <div class="example-card">
+        <div class="title">OCR</div>
+        <div class="desc">Reads an image and produces a title and description of its visual content.</div>
+      </div>
+      <div class="example-card">
+        <div class="title">Writer &amp; critic</div>
+        <div class="desc">A writer script that calls a critic as a subagent and iterates until the critique passes.</div>
+      </div>
+      <div class="example-card">
+        <div class="title">Chat</div>
+        <div class="desc">A persistent assistant with memory across sessions. A Turing test where two agents face off, one trying to pass as human.</div>
+      </div>
+      <div class="example-card">
+        <div class="title">Games</div>
+        <div class="desc">Animal guess uses the question tool for script interactivity. Taboo pits two agents against each other.</div>
+      </div>
+      <div class="example-card">
+        <div class="title">Idea brainstormer</div>
+        <div class="desc">Generates ideas, deduplicates, expands, reviews, and files them into a ranked list.</div>
+      </div>
+      <div class="example-card">
+        <div class="title">Software dark factory</div>
+        <div class="desc">Pitch in, deployed product out. Architect → spec → build → QA → deploy notes, no humans in the loop.</div>
+      </div>
+      <div class="example-card">
+        <div class="title">Twitter thread author</div>
+        <div class="desc">Researches any topic and writes compelling threads based on a configurable persona. Deduplicates against previously published topics.</div>
+      </div>
+      <div class="example-card">
+        <div class="title">News digest</div>
+        <div class="desc">Consumes an RSS feed, filters posts relevant to a topic, and summarizes each one into a clean digest.</div>
+      </div>
+    </div>
+
+    <a class="cta-btn" href="https://github.com/xmd-scripts/xmd-examples" target="_blank">
+      View examples on GitHub →
+    </a>
+  </div>
+</section>
+
+<!-- ── Footer ────────────────────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <a href="https://github.com/xmd-scripts/xmd" target="_blank">github.com/xmd-scripts/xmd</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/xmd-scripts/xmd/blob/main/docs/quickstart.md" target="_blank">quickstart</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/xmd-scripts/xmd/blob/main/SPEC.md" target="_blank">spec</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var demos = [
+    { file: 'find-blue.md',   cmd: './find-blue.md',   prompt: 'Find all images with a blue\nbackground in this directory.' },
+    { file: 'git-summary.md', cmd: './git-summary.md', prompt: 'Summarize the git commits\nin this repo from the past week.' },
+    { file: 'find-todos.md',  cmd: './find-todos.md',  prompt: 'Find all TODO comments\nand prioritize them.'              },
+    { file: 'complex-fn.md',  cmd: './complex-fn.md',  prompt: 'What is the most complex\nfunction in this codebase?'      },
+    { file: 'open-ports.md',  cmd: './open-ports.md',  prompt: 'List all open ports\non this machine.'                    },
+  ];
+
+  var idx = 0;
+
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  async function type(el, text, base) {
+    for (var i = 0; i < text.length; i++) {
+      el.textContent += text[i];
+      await sleep(base + Math.random() * base * 0.5);
+    }
+  }
+
+  async function runLoop() {
+    var demo = demos[idx % demos.length];
+    idx++;
+
+    var filenameEl  = document.getElementById('demo-filename');
+    var promptEl    = document.getElementById('demo-prompt');
+    var cursorEl    = document.getElementById('demo-cursor');
+    var cmdEl       = document.getElementById('demo-cmd');
+    var runCursorEl = document.getElementById('demo-run-cursor');
+
+    filenameEl.textContent    = demo.file;
+    promptEl.textContent      = '';
+    cmdEl.textContent         = '';
+    cursorEl.style.display    = 'inline';
+    runCursorEl.style.display = 'none';
+
+    await sleep(500);
+    await type(promptEl, demo.prompt, 38);
+    await sleep(700);
+
+    cursorEl.style.display    = 'none';
+    runCursorEl.style.display = 'inline';
+
+    await type(cmdEl, demo.cmd, 65);
+    await sleep(500);
+
+    runCursorEl.style.display = 'none';
+    await sleep(1600);
+
+    setTimeout(runLoop, 100);
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(runLoop, 800);
+  });
+})();
+</script>
+</body>
+</html>
